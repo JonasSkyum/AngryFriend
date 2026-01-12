@@ -1,8 +1,11 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="da">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Angry Ojisan</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
@@ -45,8 +48,8 @@
 
     <!-- Game over kort (skjult som udgangspunkt) -->
     <div id="gameover" class="card hidden">
-      <h2 style="margin:0">Game Over</h2>
-      <div id="scoreline" style="opacity:.9">Score: 0</div>
+      <h2 style="margin: 0">Game Over</h2>
+      <div id="scoreline" style="opacity: 0.9">Score: 0</div>
       <div class="segment">
         <button class="btn" id="btn-retry">Retry</button>
         <button class="btn" id="btn-menu">Menu</button>
@@ -55,13 +58,22 @@
 
     <!-- Drinking punishment popup -->
     <div id="punishment-popup" class="card hidden">
-      <h2 style="margin:0">🍺 STRAF! 🍺</h2>
-      <div id="punishment-text" style="font-size:1.4em;margin:12px 0;font-weight:bold"></div>
+      <h2 style="margin: 0">🍺 STRAF! 🍺</h2>
+      <div
+        id="punishment-text"
+        style="font-size: 1.4em; margin: 12px 0; font-weight: bold"
+      ></div>
       <button class="btn btn--primary" id="btn-punishment-ok">OK, Done!</button>
     </div>
 
-    <div id="ui" style="display: none;">
-      <input id="file-input" type="file" accept="image/*" multiple style="display:none" />
+    <div id="ui" style="display: none">
+      <input
+        id="file-input"
+        type="file"
+        accept="image/*"
+        multiple
+        style="display: none"
+      />
     </div>
 
     <div id="app"></div>
