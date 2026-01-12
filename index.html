@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Angry Ojisan</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <!-- Topbar (bruges in-game / grid-scene) -->
+    <div id="topbar" class="topbar hidden">
+      <button class="btn topbar__back" id="btn-back">← Tilbage</button>
+      <div class="topbar__title" id="topbar-title">Grid: 4×4</div>
+    </div>
+
+    <!-- Menu overlay -->
+    <div id="menu" class="menu">
+      <div class="menu__panel">
+        <h1 class="menu__title">ANGRY OJISAN</h1>
+
+        <div>
+          <div class="menu__group-title">Mode</div>
+          <div class="segment" id="mode-segment">
+            <button class="btn" id="btn-classic">Classic</button>
+            <button class="btn" id="btn-drinking">🍺 Drinking</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="menu__group-title">Grid size</div>
+          <div class="segment segment--compact" id="grid-segment">
+            <button class="btn" data-size="2">2×2</button>
+            <button class="btn" data-size="3">3×3</button>
+            <button class="btn" data-size="4">4×4</button>
+            <button class="btn" data-size="5">5×5</button>
+            <button class="btn" data-size="6">6×6</button>
+          </div>
+        </div>
+
+        <button class="btn btn--wide" id="btn-upload">Upload Face</button>
+
+        <button class="btn btn--primary btn--xl" id="btn-start">START</button>
+      </div>
+    </div>
+
+    <!-- Game over kort (skjult som udgangspunkt) -->
+    <div id="gameover" class="card hidden">
+      <h2 style="margin:0">Game Over</h2>
+      <div id="scoreline" style="opacity:.9">Score: 0</div>
+      <div class="segment">
+        <button class="btn" id="btn-retry">Retry</button>
+        <button class="btn" id="btn-menu">Menu</button>
+      </div>
+    </div>
+
+    <!-- Drinking punishment popup -->
+    <div id="punishment-popup" class="card hidden">
+      <h2 style="margin:0">🍺 STRAF! 🍺</h2>
+      <div id="punishment-text" style="font-size:1.4em;margin:12px 0;font-weight:bold"></div>
+      <button class="btn btn--primary" id="btn-punishment-ok">OK, Done!</button>
+    </div>
+
+    <div id="ui" style="display: none;">
+      <input id="file-input" type="file" accept="image/*" multiple style="display:none" />
+    </div>
+
+    <div id="app"></div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,217 @@
+/* ====== Design tokens ====== */
+:root {
+  --bg-top: #102b5b;
+  --bg-mid: #0b2447;
+  --bg-bot: #081c3a;
+
+  --fg: #ffffff;
+  --fg-dim: rgba(255, 255, 255, 0.85);
+  --line: rgba(255, 255, 255, 0.18);
+
+  --btn-outline-bg: rgba(255, 255, 255, 0.06);
+  --btn-outline-bg-hover: rgba(255, 255, 255, 0.1);
+
+  --btn-primary-start: #157a9e; /* teal */
+  --btn-primary-end: #0f5e7e;
+  --btn-primary-start-hover: #1992b7;
+  --btn-primary-end-hover: #127297;
+
+  --glass-bg: rgba(0, 0, 0, 0.22);
+  --glass-bg-strong: rgba(0, 0, 0, 0.32);
+  --glass-blur: 10px;
+
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+
+/* ====== Global baggrund ====== */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    sans-serif;
+  background: radial-gradient(
+    1200px 800px at 50% 18%,
+    var(--bg-top) 0%,
+    var(--bg-mid) 55%,
+    var(--bg-bot) 100%
+  );
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
+
+#ui {
+  display: none;
+}
+
+/* Ensartet knap-base */
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 0.7rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--fg-dim);
+  background: var(--btn-outline-bg);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease;
+  backdrop-filter: saturate(120%);
+}
+.btn:hover {
+  background: var(--btn-outline-bg-hover);
+}
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Primær (START) */
+.btn--primary {
+  color: var(--fg);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: linear-gradient(
+    180deg,
+    var(--btn-primary-start),
+    var(--btn-primary-end)
+  );
+  box-shadow: var(--shadow-soft);
+}
+.btn--primary:hover {
+  background: linear-gradient(
+    180deg,
+    var(--btn-primary-start-hover),
+    var(--btn-primary-end-hover)
+  );
+}
+
+/* Segment-knapper (Classic/Drinking, grid størrelse) */
+.segment {
+  display: inline-flex;
+  gap: 0.75rem;
+}
+.segment .btn {
+  min-width: 120px;
+  text-align: center;
+}
+.segment--compact .btn {
+  min-width: 90px;
+  padding: 0.55rem 0.8rem;
+  font-weight: 700;
+}
+
+/* Active/Selected state for mode buttons */
+.btn--active {
+  background: linear-gradient(
+    180deg,
+    var(--btn-primary-start),
+    var(--btn-primary-end)
+  ) !important;
+  color: var(--fg) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 0 12px rgba(21, 122, 158, 0.4);
+}
+
+/* Topbar */
+.topbar {
+  position: fixed;
+  inset: env(safe-area-inset-top) 12px auto 12px;
+  height: 44px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(var(--glass-blur));
+  z-index: 10;
+}
+.topbar__title {
+  grid-column: 2 / 3;
+  justify-self: center;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.topbar__back {
+  grid-column: 1 / 2;
+  justify-self: start;
+}
+
+/* Menu container */
+.menu {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+}
+
+.menu__panel {
+  width: min(92vw, 500px);
+  display: grid;
+  gap: 18px;
+  padding: 28px 22px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-soft);
+}
+
+.menu__title {
+  margin: 0 0 6px;
+  font-size: 2.4rem;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+}
+
+.menu__group-title {
+  margin: 12px 4px 2px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+/* Upload-knap i fuld bredde */
+.btn--wide {
+  width: 100%;
+}
+
+/* Start-knap i stor størrelse */
+.btn--xl {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1.25rem;
+  border-radius: 20px;
+}
+
+/* Glas-kort (score, game over osv.) */
+.card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 420px);
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(calc(var(--glass-blur) + 4px));
+  box-shadow: var(--shadow-soft);
+}
+
+.hidden {
+  display: none !important;
+}
