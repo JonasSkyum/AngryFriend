@@ -215,3 +215,114 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* ====== Mobile / iPhone responsivitet ====== */
+@media (max-width: 480px) {
+  .menu {
+    padding-top: max(env(safe-area-inset-top), 8vh);
+  }
+
+  .menu__panel {
+    width: calc(100vw - 24px);
+    padding: 20px 16px;
+    gap: 14px;
+  }
+
+  .menu__title {
+    font-size: 1.8rem;
+    text-align: center;
+  }
+
+  .menu__group-title {
+    font-size: 0.95rem;
+    margin: 8px 4px 2px;
+  }
+
+  /* Segment-knapper: wrap og mindre padding */
+  .segment {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .segment .btn {
+    min-width: 100px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  .segment--compact .btn {
+    min-width: 50px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .btn--xl {
+    padding: 0.9rem 1rem;
+    font-size: 1.1rem;
+  }
+
+  .btn--wide {
+    font-size: 0.95rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  /* Topbar */
+  .topbar {
+    inset: max(env(safe-area-inset-top), 8px) 8px auto 8px;
+    height: 40px;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .topbar__title {
+    font-size: 0.9rem;
+  }
+
+  .topbar__back {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* Game over / punishment cards */
+  .card {
+    width: calc(100vw - 32px);
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .card h2 {
+    font-size: 1.3rem;
+  }
+
+  .card .segment {
+    gap: 8px;
+  }
+
+  .card .btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 360px) {
+  .menu__title {
+    font-size: 1.5rem;
+  }
+
+  .segment--compact .btn {
+    min-width: 45px;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Safe area padding for notch/home indicator */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -2,7 +2,8 @@ import Phaser from "phaser";
 
 interface GridData {
   size: number;
-  headKey?: string;
+  headKey?: string; // deprecated - use headKeys
+  headKeys?: string[]; // array af forskellige ansigter
   hideMarker?: boolean;
   drinkingMode?: boolean;
 }
@@ -84,12 +85,14 @@ const DRINKING_PUNISHMENTS = [
 
 export default class GridScene extends Phaser.Scene {
   private size = 4;
-  private headKey = "fallback-head";
+  private headKeys: string[] = ["fallback-head"];
   private hideMarker = true;
   private drinkingMode = false;
 
   private forbiddenIndex = 0;
+  private forbiddenHeadKey = "fallback-head"; // Holder styr på hvilket ansigt der er forbudt
   private tiles: Phaser.GameObjects.Image[] = [];
+  private tileHeadKeys: string[] = []; // Holder styr på hvilket ansigt hver tile har
   private score = 0;
 
   private uiText!: Phaser.GameObjects.Text;
@@ -116,16 +119,21 @@ export default class GridScene extends Phaser.Scene {
     this.size = data.size ?? 4;
     this.hideMarker = data.hideMarker ?? true;
     this.drinkingMode = data.drinkingMode ?? false;
-    if (data.headKey && this.textures.exists(data.headKey)) {
-      this.headKey = data.headKey;
-      console.log("Using custom head:", data.headKey);
+
+    // Håndter både gammelt headKey og nyt headKeys format
+    if (data.headKeys && data.headKeys.length > 0) {
+      // Filtrer kun eksisterende teksturer
+      this.headKeys = data.headKeys.filter((key) => this.textures.exists(key));
+      if (this.headKeys.length === 0) {
+        this.headKeys = ["fallback-head"];
+      }
+      console.log("Using custom heads:", this.headKeys);
+    } else if (data.headKey && this.textures.exists(data.headKey)) {
+      this.headKeys = [data.headKey];
+      console.log("Using single custom head:", data.headKey);
     } else {
-      console.log(
-        "Using fallback head, data.headKey:",
-        data.headKey,
-        "exists:",
-        data.headKey ? this.textures.exists(data.headKey) : false
-      );
+      this.headKeys = ["fallback-head"];
+      console.log("Using fallback head");
     }
 
     // Topbar-UI
@@ -145,8 +153,7 @@ export default class GridScene extends Phaser.Scene {
   }
 
   // -------- Ansigter: lav rund avatar-tekstur med skygge/ring/gloss --------
-  private ensureStyledTileTexture(tileSize: number): string {
-    const baseKey = this.headKey;
+  private ensureStyledTileTexture(tileSize: number, baseKey: string): string {
     const cacheKey = `${baseKey}-${tileSize}`;
     if (
       this.styledKeyCache.has(cacheKey) &&
@@ -227,6 +234,7 @@ export default class GridScene extends Phaser.Scene {
   private layoutGrid() {
     this.tiles.forEach((t) => t.destroy());
     this.tiles = [];
+    this.tileHeadKeys = [];
 
     const { width, height } = this.scale;
     const top = 72; // plads til topbar
@@ -242,7 +250,11 @@ export default class GridScene extends Phaser.Scene {
         (gridH - (this.size - 1) * gap) / this.size
       )
     );
-    const texKey = this.ensureStyledTileTexture(tileSize);
+
+    // Forbered stylede teksturer for alle headKeys
+    const styledTexKeys = this.headKeys.map((key) =>
+      this.ensureStyledTileTexture(tileSize, key)
+    );
 
     const totalW = tileSize * this.size + gap * (this.size - 1);
     const totalH = tileSize * this.size + gap * (this.size - 1);
@@ -253,6 +265,12 @@ export default class GridScene extends Phaser.Scene {
       for (let c = 0; c < this.size; c++) {
         const x = startX + c * (tileSize + gap) + tileSize / 2;
         const y = startY + r * (tileSize + gap) + tileSize / 2;
+
+        // Vælg et tilfældigt ansigt til denne tile
+        const randomIndex = Phaser.Math.Between(0, this.headKeys.length - 1);
+        const texKey = styledTexKeys[randomIndex];
+        const headKey = this.headKeys[randomIndex];
+        this.tileHeadKeys.push(headKey);
 
         const img = this.add
           .image(x, y, texKey)
@@ -294,6 +312,7 @@ export default class GridScene extends Phaser.Scene {
 
   private pickForbidden() {
     this.forbiddenIndex = Phaser.Math.Between(0, this.tiles.length - 1);
+    this.forbiddenHeadKey = this.tileHeadKeys[this.forbiddenIndex];
     this.applyMarker();
   }
 
@@ -321,9 +340,15 @@ export default class GridScene extends Phaser.Scene {
     const isForbidden = index === this.forbiddenIndex;
 
     if (isForbidden) {
+      // Deaktiver input med det samme
+      this.input.enabled = false;
+
+      // Flash og shake effekter
       this.cameras.main.flash(80, 200, 0, 0);
       this.cameras.main.shake(120, 0.01);
-      this.gameOver();
+
+      // Zoom ind på det forbudte billede
+      this.zoomToForbiddenTile(clickedTile);
       return;
     }
 
@@ -378,8 +403,9 @@ export default class GridScene extends Phaser.Scene {
       ease: "Back.easeIn",
       onComplete: () => {
         clickedTile.destroy();
-        // Fjern fra tiles array
+        // Fjern fra tiles array og tileHeadKeys array
         this.tiles.splice(index, 1);
+        this.tileHeadKeys.splice(index, 1);
         // Opdater forbiddenIndex hvis nødvendigt
         if (this.forbiddenIndex > index) {
           this.forbiddenIndex--;
@@ -387,6 +413,7 @@ export default class GridScene extends Phaser.Scene {
         // Vælg ny forbudt avatar blandt de resterende
         if (this.tiles.length > 1) {
           this.forbiddenIndex = Phaser.Math.Between(0, this.tiles.length - 1);
+          this.forbiddenHeadKey = this.tileHeadKeys[this.forbiddenIndex];
           this.applyMarker();
         } else if (this.tiles.length === 1) {
           // Kun den forbudte avatar er tilbage - spilleren har vundet!
@@ -412,6 +439,78 @@ export default class GridScene extends Phaser.Scene {
     });
   }
 
+  private zoomToForbiddenTile(tile: Phaser.GameObjects.Image) {
+    // Skjul alle andre tiles
+    this.tiles.forEach((t) => {
+      if (t !== tile) {
+        this.tweens.add({
+          targets: t,
+          alpha: 0,
+          duration: 300,
+          ease: "Sine.easeOut",
+        });
+      }
+    });
+
+    // Beregn hvor meget vi skal zoome for at fylde skærmen
+    const { width, height } = this.scale;
+    const targetSize = Math.min(width, height) * 0.7;
+    const currentSize = tile.displayWidth;
+    const scaleFactor = targetSize / currentSize;
+
+    // Centrer kameraet på tile'en og zoom ind
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Tilføj rød glød/ramme omkring den forbudte
+    const glowCircle = this.add
+      .circle(tile.x, tile.y, tile.displayWidth / 2 + 10, 0xff0000, 0.3)
+      .setDepth(tile.depth - 1);
+
+    // Animer tile til centrum og forstør den
+    this.tweens.add({
+      targets: [tile, glowCircle],
+      x: centerX,
+      y: centerY,
+      duration: 600,
+      ease: "Sine.easeInOut",
+    });
+
+    this.tweens.add({
+      targets: tile,
+      displayWidth: targetSize,
+      displayHeight: targetSize,
+      duration: 600,
+      ease: "Sine.easeInOut",
+    });
+
+    this.tweens.add({
+      targets: glowCircle,
+      radius: targetSize / 2 + 15,
+      alpha: 0.5,
+      duration: 600,
+      ease: "Sine.easeInOut",
+    });
+
+    // Tilføj "pulserende" rød ramme
+    this.time.delayedCall(400, () => {
+      this.tweens.add({
+        targets: glowCircle,
+        alpha: 0.2,
+        yoyo: true,
+        repeat: 2,
+        duration: 200,
+        ease: "Sine.easeInOut",
+      });
+    });
+
+    // Vis game over efter zoom-animationen
+    this.time.delayedCall(1200, () => {
+      glowCircle.destroy();
+      this.gameOver();
+    });
+  }
+
   // -------- Game Over overlay (DOM) --------
   private bindDomOverlays() {
     // vis topbar (fra CSS/HTML vi lagde i index.html)
@@ -434,7 +533,7 @@ export default class GridScene extends Phaser.Scene {
         document.getElementById("gameover")?.classList.add("hidden");
         this.scene.restart({
           size: this.size,
-          headKey: this.headKey,
+          headKeys: this.headKeys,
           hideMarker: this.hideMarker,
           drinkingMode: this.drinkingMode,
         } as GridData);
