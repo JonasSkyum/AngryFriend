@@ -2,6 +2,8 @@ import fallbackFace from "./assets/ojisan.svg";
 
 // Uploadede billeder skaleres ned til et kvadrat (max tile-størrelse på retina ~ 512px)
 const MAX_FACE_SIZE = 512;
+// Et 12 MP-foto fylder ~50 MB dekodet – dekod kun få ad gangen, så mobilen ikke løber tør for hukommelse
+const DECODE_CONCURRENCY = 3;
 const DB_NAME = "angry-ojisan";
 const STORE = "faces";
 
@@ -25,31 +27,31 @@ function db(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-async function tx<T>(
-  mode: IDBTransactionMode,
-  run: (store: IDBObjectStore) => IDBRequest<T>
-): Promise<T> {
-  const store = (await db()).transaction(STORE, mode).objectStore(STORE);
-  return new Promise((resolve, reject) => {
-    const req = run(store);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+// Én transaktion til hele operationen; resolver når den er committed
+async function tx(mode: IDBTransactionMode, run: (store: IDBObjectStore) => void) {
+  const t = (await db()).transaction(STORE, mode);
+  run(t.objectStore(STORE));
+  return new Promise<void>((resolve, reject) => {
+    t.oncomplete = () => resolve();
+    t.onerror = t.onabort = () => reject(t.error);
   });
 }
 
 export async function loadSavedFaces(): Promise<Face[]> {
+  const faces: Face[] = [];
   try {
-    const [keys, blobs] = await Promise.all([
-      tx("readonly", (s) => s.getAllKeys()),
-      tx("readonly", (s) => s.getAll() as IDBRequest<Blob[]>),
-    ]);
-    return blobs.map((blob, i) => ({
-      id: String(keys[i]),
-      url: URL.createObjectURL(blob),
-    }));
+    await tx("readonly", (s) => {
+      s.openCursor().onsuccess = (e) => {
+        const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
+        if (!cursor) return;
+        faces.push({ id: String(cursor.key), url: URL.createObjectURL(cursor.value as Blob) });
+        cursor.continue();
+      };
+    });
   } catch {
-    return []; // Privat browsing o.l. - kør videre uden persistens
+    /* Privat browsing o.l. - kør videre uden persistens */
   }
+  return faces;
 }
 
 export async function clearFaces(faces: Face[]) {
@@ -61,12 +63,44 @@ export async function clearFaces(faces: Face[]) {
   }
 }
 
-// Indlæs filer parallelt; ét dårligt billede stopper ikke de andre
+export async function deleteFace(face: Face) {
+  URL.revokeObjectURL(face.url);
+  try {
+    await tx("readwrite", (s) => s.delete(face.id));
+  } catch {
+    /* ingen persistens */
+  }
+}
+
+// Kør fn over items med højst `limit` samtidige kald
+async function mapSettled<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        results[i] = { status: "fulfilled", value: await fn(items[i]) };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+// Ét dårligt billede stopper ikke de andre
 export async function addFaces(
   files: File[]
 ): Promise<{ faces: Face[]; failed: number }> {
-  const results = await Promise.allSettled(files.map(toFaceBlob));
+  const results = await mapSettled(files, DECODE_CONCURRENCY, toFaceBlob);
   const faces: Face[] = [];
+  const blobs: [string, Blob][] = [];
   let failed = 0;
   const stamp = Date.now();
 
@@ -75,13 +109,15 @@ export async function addFaces(
       failed++;
       continue;
     }
-    const id = `${stamp}-${i}`;
+    // Polstret indeks, så nøglerne sorterer i upload-rækkefølge
+    const id = `${stamp}-${String(i).padStart(4, "0")}`;
     faces.push({ id, url: URL.createObjectURL(res.value) });
-    try {
-      await tx("readwrite", (s) => s.put(res.value, id));
-    } catch {
-      /* ingen persistens */
-    }
+    blobs.push([id, res.value]);
+  }
+  try {
+    await tx("readwrite", (s) => blobs.forEach(([id, blob]) => s.put(blob, id)));
+  } catch {
+    /* ingen persistens */
   }
   return { faces, failed };
 }
@@ -89,14 +125,14 @@ export async function addFaces(
 // Centreret, nedskaleret kvadrat-udsnit som JPEG
 async function toFaceBlob(file: File): Promise<Blob> {
   const url = URL.createObjectURL(file);
+  const img = new Image();
+  const canvas = document.createElement("canvas");
   try {
-    const img = new Image();
     img.src = url;
     await img.decode();
 
     const side = Math.min(img.naturalWidth, img.naturalHeight);
     const out = Math.min(side, MAX_FACE_SIZE);
-    const canvas = document.createElement("canvas");
     canvas.width = canvas.height = out;
     const ctx = canvas.getContext("2d")!;
     ctx.imageSmoothingQuality = "high";
@@ -119,6 +155,9 @@ async function toFaceBlob(file: File): Promise<Blob> {
       )
     );
   } finally {
+    // Frigiv den dekodede fuld-opløsnings-bitmap med det samme
     URL.revokeObjectURL(url);
+    img.src = "";
+    canvas.width = canvas.height = 0;
   }
 }

@@ -1,5 +1,4 @@
 import type { Face } from "./faces";
-import { DRINKING_PUNISHMENTS } from "./punishments";
 
 export interface GameOptions {
   size: number;
@@ -9,12 +8,24 @@ export interface GameOptions {
 
 export interface GameHooks {
   onScore(score: number): void;
+  /** Antal tiles tilbage (inkl. den forbudte) ud af total */
+  onProgress(remaining: number, total: number): void;
+  /** Kaldes i det øjeblik den forbudte rammes, før animationen */
+  onLose(): void;
   onResult(won: boolean, score: number): void;
-  onPunishment(text: string, done: () => void): void;
+  onPunishment(done: () => void): void;
 }
 
-const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (max: number) => Math.floor(Math.random() * max);
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 // Samme regler som før: én skjult "forbudt" tile, ny trækkes efter hvert korrekt klik.
 // Sidste tile tilbage = sejr. Rammer man den forbudte = game over.
@@ -34,6 +45,7 @@ export class Game {
     this.layoutGrid();
     this.pickForbidden();
     this.hooks.onScore(0);
+    this.hooks.onProgress(this.tiles.length, this.tiles.length);
   }
 
   destroy() {
@@ -52,6 +64,10 @@ export class Game {
     this.board.replaceChildren();
     this.board.style.setProperty("--n", String(size));
 
+    // Blandede kopier efter hinanden: alle ansigter bruges før nogen gentages
+    const deck: Face[] = [];
+    while (deck.length < size * size) deck.push(...shuffle(faces));
+
     const frag = document.createDocumentFragment();
     for (let i = 0; i < size * size; i++) {
       const tile = document.createElement("button");
@@ -61,7 +77,7 @@ export class Game {
       tile.setAttribute("aria-label", `Ansigt ${i + 1}`);
 
       const img = document.createElement("img");
-      img.src = pick(faces).url;
+      img.src = deck[i].url;
       img.alt = "";
       img.draggable = false;
       img.decoding = "async";
@@ -90,6 +106,7 @@ export class Game {
 
     if (index === this.forbiddenIndex) {
       this.locked = true;
+      this.hooks.onLose();
       this.loseOn(tile);
       return;
     }
@@ -99,10 +116,11 @@ export class Game {
     tile.disabled = true;
     this.score += 1;
     this.hooks.onScore(this.score);
+    this.hooks.onProgress(this.tiles.length, this.opts.size ** 2);
 
     if (this.opts.drinkingMode) {
       this.locked = true;
-      this.hooks.onPunishment(pick(DRINKING_PUNISHMENTS), () => {
+      this.hooks.onPunishment(() => {
         this.locked = false;
         this.removeTileAndContinue(tile);
       });

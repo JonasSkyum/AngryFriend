@@ -72,3 +72,17 @@ export const DRINKING_PUNISHMENTS = [
   "Sig 'skål' på 3 sprog før du drikker 🌐",
   "Lav dyre-lyde resten af spillet før du drikker! 🐮",
 ];
+
+// Når man rammer den forbudte ojisan i drinking mode
+export const BIG_PUNISHMENTS = [
+  "Bund din drink! 🍺⬇️",
+  "Tag et shot – ingen undskyldninger! 🥃",
+  "Alle peger på dig og råber KORA! Drik 5 tår 👉😡",
+  "Waterfall – og du er den sidste der må stoppe 🌊",
+  "Drik indtil gruppen har talt til 10 🔟",
+  "Bland en drink til dig selv – gruppen vælger ingredienserne 🧪",
+  "Drik 5 tår og lav din bedste vrede ojisan-grimasse 👴💢",
+  "Du skal bunde – men du må vælge én der bunder med dig 🤝",
+  "Dobbelt op: Drik 4 tår nu og 4 tår i næste runde ⏩",
+  "Syng omkvædet af en sang gruppen vælger – og drik 3 tår bagefter 🎤",
+];

@@ -14,10 +14,12 @@
     <title>Angry Ojisan</title>
   </head>
   <body data-screen="menu">
-    <div class="bg" aria-hidden="true"><div class="bg__sun"></div></div>
+    <div class="bg" id="bg" aria-hidden="true"><div class="bg__sun"></div></div>
 
     <!-- Menu -->
     <main id="menu" class="screen menu">
+      <button class="btn btn--icon menu__sound js-sound" aria-label="Lyd"></button>
+
       <header class="brand">
         <h1 class="brand__title">Angry<span>Ojisan</span></h1>
         <div class="brand__stamp" aria-hidden="true">怒</div>
@@ -40,7 +42,10 @@
         </div>
 
         <div class="field">
-          <span class="field__label" id="grid-label">Grid</span>
+          <div class="field__head">
+            <span class="field__label" id="grid-label">Grid</span>
+            <span class="field__note" id="grid-best"></span>
+          </div>
           <div class="sizes" id="grid-seg" role="radiogroup" aria-labelledby="grid-label">
             <button class="size" role="radio" data-size="2" style="--n: 2"><i></i>2×2</button>
             <button class="size" role="radio" data-size="3" style="--n: 3"><i></i>3×3</button>
@@ -51,14 +56,34 @@
         </div>
 
         <div class="field">
+          <div class="field__head">
+            <span class="field__label">Spillere</span>
+            <span class="field__note" id="players-hint"></span>
+          </div>
+          <div class="players" id="players"></div>
+          <form class="add" id="player-form" autocomplete="off">
+            <input class="input" id="player-input" placeholder="Navn" maxlength="16" enterkeyhint="done" aria-label="Spillernavn" />
+            <button class="btn btn--ghost btn--sm" type="submit">+ Tilføj</button>
+          </form>
+        </div>
+
+        <div class="field">
           <span class="field__label">Ansigter</span>
           <div class="faces">
-            <div class="faces__stack" id="faces-stack"></div>
+            <button class="faces__stack" id="faces-stack" aria-label="Se ansigter"></button>
             <span class="faces__hint" id="faces-hint"></span>
             <div class="faces__actions">
-              <button class="btn btn--text" id="btn-clear" hidden>Ryd</button>
-              <button class="btn btn--ghost btn--sm" id="btn-upload">+ Upload</button>
+              <button class="btn btn--text" id="btn-edit-faces" hidden>Rediger</button>
+              <button class="btn btn--ghost btn--sm js-upload">+ Upload</button>
             </div>
+          </div>
+        </div>
+
+        <div class="field field--drinking">
+          <span class="field__label">Egne straffe</span>
+          <div class="faces">
+            <span class="faces__hint" id="punish-hint"></span>
+            <button class="btn btn--ghost btn--sm" id="btn-edit-punish">Rediger</button>
           </div>
         </div>
 
@@ -74,13 +99,19 @@
         </button>
         <div class="hud__meta">
           <span class="chip" id="hud-mode"></span>
-          <span class="chip chip--dim" id="hud-size"></span>
+          <span class="chip chip--dim chip--odds" id="hud-odds" title="Risiko for at ramme den forbudte"></span>
         </div>
+        <button class="btn btn--icon js-sound" aria-label="Lyd"></button>
         <div class="hud__score" aria-live="polite">
           <span class="hud__label">Score</span>
           <span class="hud__value" id="hud-score">0</span>
         </div>
       </header>
+      <div class="turn" id="turn" aria-live="polite" hidden>
+        <span class="turn__label">Tur</span>
+        <strong class="turn__name" id="turn-name"></strong>
+        <span aria-hidden="true">👉</span>
+      </div>
       <div class="arena"><div class="board" id="board"></div></div>
     </section>
 
@@ -90,11 +121,13 @@
     <div class="modal" id="result" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden>
       <div class="card card--paper">
         <div class="card__stamp" id="result-stamp" aria-hidden="true">怒</div>
+        <div class="card__badge" id="result-record" hidden>Ny rekord!</div>
         <h2 class="card__title" id="result-title">Game Over</h2>
         <div class="card__score">
           <span id="result-score">0</span>
           <small>point</small>
         </div>
+        <p class="card__sub" id="result-sub"></p>
         <div class="card__actions">
           <button class="btn btn--primary" id="btn-retry">Retry</button>
           <button class="btn btn--outline" id="btn-menu">Menu</button>
@@ -105,10 +138,43 @@
     <!-- Drinking straf -->
     <div class="modal" id="punishment-popup" role="dialog" aria-modal="true" aria-labelledby="punishment-title" hidden>
       <div class="card card--gold">
-        <div class="card__emoji" aria-hidden="true">🍺</div>
+        <div class="card__emoji" id="punishment-emoji" aria-hidden="true">🍺</div>
+        <p class="card__who" id="punishment-who" hidden></p>
         <h2 class="card__title" id="punishment-title">Straf!</h2>
         <p class="card__text" id="punishment-text"></p>
         <button class="btn btn--ink btn--xl" id="btn-punishment-ok">OK, Done!</button>
+      </div>
+    </div>
+
+    <!-- Ansigts-galleri -->
+    <div class="modal modal--sheet" id="faces-sheet" role="dialog" aria-modal="true" aria-labelledby="faces-sheet-title" hidden>
+      <div class="sheet">
+        <header class="sheet__head">
+          <h2 class="sheet__title" id="faces-sheet-title">Ansigter</h2>
+          <button class="btn btn--icon" data-close aria-label="Luk">✕</button>
+        </header>
+        <div class="gallery" id="gallery"></div>
+        <p class="sheet__empty" id="gallery-empty">Ingen ansigter endnu – upload nogle billeder af dine venner.</p>
+        <div class="sheet__actions">
+          <button class="btn btn--text" id="btn-clear">Slet alle</button>
+          <button class="btn btn--ghost btn--sm js-upload">+ Upload</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Egne straffe -->
+    <div class="modal modal--sheet" id="punish-sheet" role="dialog" aria-modal="true" aria-labelledby="punish-sheet-title" hidden>
+      <div class="sheet">
+        <header class="sheet__head">
+          <h2 class="sheet__title" id="punish-sheet-title">Egne straffe</h2>
+          <button class="btn btn--icon" data-close aria-label="Luk">✕</button>
+        </header>
+        <form class="add" id="punish-form" autocomplete="off">
+          <input class="input" id="punish-input" placeholder="Fx: Syng en Gasolin-sang 🎤" maxlength="120" enterkeyhint="done" aria-label="Ny straf" />
+          <button class="btn btn--ghost btn--sm" type="submit">Tilføj</button>
+        </form>
+        <ul class="list" id="punish-list"></ul>
+        <p class="sheet__empty" id="punish-empty">Dine egne straffe blandes med de indbyggede – halvdelen af gangene er det en af dine.</p>
       </div>
     </div>
 

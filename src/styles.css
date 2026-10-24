@@ -119,6 +119,23 @@ body.is-drinking .bg {
 body[data-screen="game"] .bg__sun {
   opacity: 0.22;
 }
+/* Rød vignet der pulserer med hjerteslaget */
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(closest-side, transparent 45%, rgba(229, 55, 42, 0.5));
+  opacity: calc(var(--tension, 0) * 0.7);
+  transition: opacity 0.4s ease;
+}
+.bg.beat::after {
+  animation: beat 0.45s ease-out;
+}
+@keyframes beat {
+  12% {
+    opacity: 1;
+  }
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -149,11 +166,17 @@ body[data-screen="game"] .bg__sun {
   overflow-y: auto;
 }
 /* Centrér med auto-margins i stedet for justify-content, så toppen ikke klippes af ved overflow */
-.menu > :first-child {
+.menu > .brand {
   margin-top: auto;
 }
-.menu > :last-child {
+.menu > .panel {
   margin-bottom: auto;
+}
+.menu__sound {
+  position: absolute;
+  top: calc(var(--safe-t) + 12px);
+  left: calc(var(--safe-l) + 12px);
+  z-index: 1;
 }
 
 .brand {
@@ -230,6 +253,80 @@ body[data-screen="game"] .bg__sun {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--paper-dim);
+}
+.field__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.field__note {
+  font-size: 0.8rem;
+  color: var(--paper-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body:not(.is-drinking) .field--drinking {
+  display: none;
+}
+
+/* Tekstfelter */
+.add {
+  display: flex;
+  gap: 8px;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--paper);
+  font: inherit;
+  font-size: 1rem; /* < 16px får iOS til at zoome */
+  -webkit-user-select: text;
+  user-select: text;
+  transition: border-color 0.2s;
+}
+.input::placeholder {
+  color: var(--paper-dim);
+  opacity: 0.6;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Spillere */
+.players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.player {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 8px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  animation: pop-in 0.3s var(--ease-back) backwards;
+}
+.player span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 0.65rem;
 }
 
 /* Mode-vælger */
@@ -326,7 +423,10 @@ body[data-screen="game"] .bg__sun {
 .faces__stack {
   display: flex;
   flex-shrink: 0;
-  padding-left: 10px;
+  padding: 0 0 0 10px;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 .faces__actions {
   display: flex;
@@ -481,7 +581,7 @@ body:not(.is-drinking) .btn--primary {
 .hud {
   width: min(100%, 620px);
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
 }
@@ -502,6 +602,53 @@ body:not(.is-drinking) .btn--primary {
 .chip--dim {
   background: var(--paper-faint);
   border-color: var(--line);
+}
+.chip--odds {
+  font-variant-numeric: tabular-nums;
+}
+body.is-critical .chip--odds {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--paper);
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Hvis tur er det */
+.turn {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  font-size: 1.3rem;
+}
+.turn__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+.turn__name {
+  font-family: var(--display);
+  font-weight: 400;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.turn--in {
+  animation: turn-in 0.4s var(--ease-back);
+}
+@keyframes turn-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.9);
+  }
 }
 .hud__score {
   display: grid;
@@ -536,13 +683,11 @@ body:not(.is-drinking) .btn--primary {
   display: grid;
   place-items: center;
   min-height: 0;
+  /* Brættet måler sig selv ud fra arenaen, uanset hvor meget HUD/tur-linjen fylder */
+  container-type: size;
 }
 .board {
-  --board: min(
-    100vw - var(--safe-l) - var(--safe-r) - 32px,
-    100dvh - var(--safe-t) - var(--safe-b) - 120px,
-    620px
-  );
+  --board: min(100cqw, 100cqh, 620px);
   position: relative;
   width: var(--board);
   height: var(--board);
@@ -571,6 +716,9 @@ body:not(.is-drinking) .btn--primary {
   padding: 0;
   border: 0;
   border-radius: 50%;
+  /* Knapper strækker ikke selv i grid; billedet er absolut og giver ingen størrelse */
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   background: var(--ink-3);
@@ -596,13 +744,26 @@ body:not(.is-drinking) .btn--primary {
   position: absolute;
   inset: 0;
   border-radius: 50%;
+  /* Glans + rød tone der vokser med spændingen */
   background: radial-gradient(
-    circle at 32% 22%,
-    rgba(255, 255, 255, 0.3),
-    rgba(255, 255, 255, 0.06) 35%,
-    transparent 60%
-  );
+      circle at 32% 22%,
+      rgba(255, 255, 255, 0.3),
+      rgba(255, 255, 255, 0.06) 35%,
+      transparent 60%
+    ),
+    rgb(229 55 42 / calc(var(--tension, 0) * 0.38));
   pointer-events: none;
+}
+body.is-critical .tile:not(.tile--gone):not(.tile--fade) {
+  animation: tremble 0.16s linear infinite;
+}
+@keyframes tremble {
+  25% {
+    translate: 1.5px -1px;
+  }
+  75% {
+    translate: -1.5px 1px;
+  }
 }
 @media (hover: hover) {
   .tile:hover {
@@ -812,6 +973,171 @@ body:not(.is-drinking) .btn--primary {
   font-weight: 800;
   line-height: 1.35;
   text-wrap: balance;
+}
+.card__who {
+  margin: 0 0 -6px;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card__sub {
+  margin: -4px 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.55;
+}
+.card__sub:empty {
+  display: none;
+}
+.card__title {
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.card__badge {
+  position: absolute;
+  top: -14px;
+  left: 18px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--gold);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  transform: rotate(-8deg);
+  animation: stamp 0.5s 0.35s var(--ease-back) both;
+}
+
+/* Stor straf: ramte den forbudte i drinking mode */
+.is-big .card--gold {
+  background: linear-gradient(170deg, #ff6b5e, var(--red) 55%, var(--red-deep));
+  color: var(--paper);
+  animation: card-in 0.45s var(--ease-back), shake 0.3s 0.45s linear;
+}
+
+/* ====== Sheets (galleri, egne straffe) ====== */
+.modal--sheet {
+  z-index: 25;
+}
+.sheet {
+  width: min(100%, 480px);
+  max-height: min(82dvh, 680px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 26px;
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: card-in 0.35s var(--ease-out);
+}
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sheet__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+}
+.sheet__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sheet__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--paper-dim);
+}
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+  margin: -6px;
+}
+.gallery:empty {
+  display: none;
+}
+.gallery__item {
+  position: relative;
+  aspect-ratio: 1;
+}
+.gallery__item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--ink-3);
+}
+.gallery__del,
+.list__del {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--ink-2);
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--paper);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.gallery__del {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+}
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  overflow-y: auto;
+}
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line);
+  animation: pop-in 0.3s var(--ease-back) backwards;
+}
+.list li span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.list__del {
+  flex-shrink: 0;
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 35;
+  pointer-events: none;
 }
 
 /* ====== Toast ====== */
