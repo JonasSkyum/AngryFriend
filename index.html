@@ -6,73 +6,112 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0b2447" />
+    <meta name="theme-color" content="#15100e" />
+    <meta name="description" content="Tryk på ansigterne – men ram ikke den forbudte ojisan." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23e5372a'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23f5ecdd'>怒</text></svg>" />
     <title>Angry Ojisan</title>
-    <link rel="stylesheet" href="/src/styles.css" />
   </head>
-  <body>
-    <!-- Topbar (bruges in-game / grid-scene) -->
-    <div id="topbar" class="topbar hidden">
-      <button class="btn topbar__back" id="btn-back">← Tilbage</button>
-      <div class="topbar__title" id="topbar-title">Grid: 4×4</div>
-    </div>
+  <body data-screen="menu">
+    <div class="bg" aria-hidden="true"><div class="bg__sun"></div></div>
 
-    <!-- Menu overlay -->
-    <div id="menu" class="menu">
-      <div class="menu__panel">
-        <h1 class="menu__title">ANGRY OJISAN</h1>
+    <!-- Menu -->
+    <main id="menu" class="screen menu">
+      <header class="brand">
+        <h1 class="brand__title">Angry<span>Ojisan</span></h1>
+        <div class="brand__stamp" aria-hidden="true">怒</div>
+        <p class="brand__tag">Tryk på ansigterne – men ram ikke den forbudte.</p>
+      </header>
 
-        <div>
-          <div class="menu__group-title">Mode</div>
-          <div class="segment" id="mode-segment">
-            <button class="btn btn--active" id="btn-classic">Classic</button>
-            <button class="btn" id="btn-drinking">🍺 Drinking</button>
+      <section class="panel">
+        <div class="field">
+          <span class="field__label" id="mode-label">Mode</span>
+          <div class="seg" id="mode-seg" role="radiogroup" aria-labelledby="mode-label">
+            <button class="seg__opt" role="radio" data-mode="classic">
+              <span class="seg__icon" aria-hidden="true">👴</span>
+              <span class="seg__name">Classic</span>
+            </button>
+            <button class="seg__opt seg__opt--gold" role="radio" data-mode="drinking">
+              <span class="seg__icon" aria-hidden="true">🍺</span>
+              <span class="seg__name">Drinking</span>
+            </button>
           </div>
         </div>
 
-        <div>
-          <div class="menu__group-title">Grid size</div>
-          <div class="segment segment--compact" id="grid-segment">
-            <button class="btn" data-size="2">2×2</button>
-            <button class="btn" data-size="3">3×3</button>
-            <button class="btn btn--active" data-size="4">4×4</button>
-            <button class="btn" data-size="5">5×5</button>
-            <button class="btn" data-size="6">6×6</button>
+        <div class="field">
+          <span class="field__label" id="grid-label">Grid</span>
+          <div class="sizes" id="grid-seg" role="radiogroup" aria-labelledby="grid-label">
+            <button class="size" role="radio" data-size="2" style="--n: 2"><i></i>2×2</button>
+            <button class="size" role="radio" data-size="3" style="--n: 3"><i></i>3×3</button>
+            <button class="size" role="radio" data-size="4" style="--n: 4"><i></i>4×4</button>
+            <button class="size" role="radio" data-size="5" style="--n: 5"><i></i>5×5</button>
+            <button class="size" role="radio" data-size="6" style="--n: 6"><i></i>6×6</button>
           </div>
         </div>
 
-        <div class="segment segment--fill">
-          <button class="btn btn--wide" id="btn-upload">Upload Face</button>
-          <button class="btn hidden" id="btn-clear">Ryd</button>
+        <div class="field">
+          <span class="field__label">Ansigter</span>
+          <div class="faces">
+            <div class="faces__stack" id="faces-stack"></div>
+            <span class="faces__hint" id="faces-hint"></span>
+            <button class="btn btn--text" id="btn-clear" hidden>Ryd</button>
+            <button class="btn btn--ghost btn--sm" id="btn-upload">+ Upload</button>
+          </div>
         </div>
 
-        <button class="btn btn--primary btn--xl" id="btn-start">START</button>
+        <button class="btn btn--primary btn--xl" id="btn-start">Start</button>
+      </section>
+    </main>
+
+    <!-- Spil -->
+    <section id="game" class="screen game" hidden>
+      <header class="hud">
+        <button class="btn btn--icon" id="btn-back" aria-label="Tilbage til menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="hud__meta">
+          <span class="chip" id="hud-mode"></span>
+          <span class="chip chip--dim" id="hud-size"></span>
+        </div>
+        <div class="hud__score" aria-live="polite">
+          <span class="hud__label">Score</span>
+          <span class="hud__value" id="hud-score">0</span>
+        </div>
+      </header>
+      <div class="arena"><div class="board" id="board"></div></div>
+    </section>
+
+    <div class="fx" id="fx" aria-hidden="true"></div>
+
+    <!-- Resultat -->
+    <div class="modal" id="result" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden>
+      <div class="card card--paper">
+        <div class="card__stamp" id="result-stamp" aria-hidden="true">怒</div>
+        <h2 class="card__title" id="result-title">Game Over</h2>
+        <div class="card__score">
+          <span id="result-score">0</span>
+          <small>point</small>
+        </div>
+        <div class="card__actions">
+          <button class="btn btn--primary" id="btn-retry">Retry</button>
+          <button class="btn btn--outline" id="btn-menu">Menu</button>
+        </div>
       </div>
     </div>
 
-    <!-- Game over kort (skjult som udgangspunkt) -->
-    <div id="gameover" class="card hidden">
-      <h2 style="margin: 0">Game Over</h2>
-      <div id="scoreline" style="opacity: 0.9">Score: 0</div>
-      <div class="segment">
-        <button class="btn" id="btn-retry">Retry</button>
-        <button class="btn" id="btn-menu">Menu</button>
+    <!-- Drinking straf -->
+    <div class="modal" id="punishment-popup" role="dialog" aria-modal="true" aria-labelledby="punishment-title" hidden>
+      <div class="card card--gold">
+        <div class="card__emoji" aria-hidden="true">🍺</div>
+        <h2 class="card__title" id="punishment-title">Straf!</h2>
+        <p class="card__text" id="punishment-text"></p>
+        <button class="btn btn--ink btn--xl" id="btn-punishment-ok">OK, Done!</button>
       </div>
     </div>
 
-    <!-- Drinking punishment popup -->
-    <div id="punishment-popup" class="card hidden">
-      <h2 style="margin: 0">🍺 STRAF! 🍺</h2>
-      <div
-        id="punishment-text"
-        style="font-size: 1.4em; margin: 12px 0; font-weight: bold"
-      ></div>
-      <button class="btn btn--primary" id="btn-punishment-ok">OK, Done!</button>
-    </div>
-
+    <div class="toast" id="toast" role="status" hidden></div>
     <input id="file-input" type="file" accept="image/*" multiple hidden />
-
-    <div id="app"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

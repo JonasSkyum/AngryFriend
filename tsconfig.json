@@ -16,7 +16,7 @@
       "@/*": ["src/*"],
       "@/scenes/*": ["src/scenes/*"]
     },
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
   "include": ["src", "vite.config.ts"]
 }
