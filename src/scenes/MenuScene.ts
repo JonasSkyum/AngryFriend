@@ -1,190 +1,166 @@
 import Phaser from "phaser";
 
-const qs = (s: string) => document.querySelector(s) as HTMLElement;
+const qs = (s: string) => document.querySelector(s) as HTMLElement | null;
+
+// Uploadede billeder skaleres ned til et kvadrat (max tile-størrelse ~ 504px)
+const MAX_FACE_SIZE = 512;
 
 export default class MenuScene extends Phaser.Scene {
   private selectedDrinkingMode = false;
-  private static eventsBound = false; // Static flag så vi kun binder events én gang
-  private boundFileHandler: ((event: Event) => void) | null = null;
+  private selectedSize = 4;
+  private eventsBound = false; // Scenen genbruges, så vi binder kun DOM-events én gang
 
   constructor() {
     super("menu");
   }
 
   create() {
-    // Vis menu
     qs("#menu")?.classList.remove("hidden");
-
-    // Reset drinking mode selection
-    this.selectedDrinkingMode = false;
-
-    // Bind event listeners (kun første gang)
     this.bindMenuEvents();
+    this.syncMenuUi();
   }
 
   private bindMenuEvents() {
-    // Skip hvis events allerede er bundet
-    if (MenuScene.eventsBound) return;
-    MenuScene.eventsBound = true;
+    if (this.eventsBound) return;
+    this.eventsBound = true;
 
-    // Mode knapper
-    const classicBtn = qs("#btn-classic");
-    const drinkingBtn = qs("#btn-drinking");
-
-    classicBtn?.addEventListener("click", () => {
+    qs("#btn-classic")?.addEventListener("click", () => {
       this.selectedDrinkingMode = false;
-      classicBtn?.classList.add("btn--active");
-      drinkingBtn?.classList.remove("btn--active");
+      this.syncMenuUi();
     });
-
-    drinkingBtn?.addEventListener("click", () => {
+    qs("#btn-drinking")?.addEventListener("click", () => {
       this.selectedDrinkingMode = true;
-      drinkingBtn?.classList.add("btn--active");
-      classicBtn?.classList.remove("btn--active");
+      this.syncMenuUi();
     });
 
-    // Grid size knapper
-    const gridButtons = document.querySelectorAll("#grid-segment .btn");
-    gridButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const size = parseInt((btn as HTMLElement).dataset.size || "4");
-        this.startGrid(size, this.selectedDrinkingMode);
-      });
-    });
+    // Grid size vælger størrelse; START starter spillet
+    document
+      .querySelectorAll<HTMLElement>("#grid-segment .btn")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => {
+          this.selectedSize = parseInt(btn.dataset.size || "4");
+          this.syncMenuUi();
+        })
+      );
 
-    // Upload knap
     qs("#btn-upload")?.addEventListener("click", () =>
-      this.triggerFileUpload()
+      (qs("#file-input") as HTMLInputElement | null)?.click()
     );
+    qs("#btn-clear")?.addEventListener("click", () => this.clearFaces());
+    qs("#btn-start")?.addEventListener("click", () => this.startGrid());
 
-    // Start knap
-    qs("#btn-start")?.addEventListener("click", () =>
-      this.startGrid(4, this.selectedDrinkingMode)
-    );
+    qs("#file-input")?.addEventListener("change", this.handleFileUpload);
+  }
 
-    // File input - brug bound handler så vi kan fjerne den hvis nødvendigt
-    const fileInput = document.getElementById(
-      "file-input"
-    ) as HTMLInputElement | null;
-    if (fileInput) {
-      fileInput.multiple = true;
-      this.boundFileHandler = this.handleFileUpload.bind(this);
-      fileInput.addEventListener("change", this.boundFileHandler);
-    }
+  private syncMenuUi() {
+    qs("#btn-classic")?.classList.toggle("btn--active", !this.selectedDrinkingMode);
+    qs("#btn-drinking")?.classList.toggle("btn--active", this.selectedDrinkingMode);
+    document
+      .querySelectorAll<HTMLElement>("#grid-segment .btn")
+      .forEach((btn) =>
+        btn.classList.toggle(
+          "btn--active",
+          btn.dataset.size === String(this.selectedSize)
+        )
+      );
+
+    const count = this.getHeadKeys().length;
+    const uploadBtn = qs("#btn-upload");
+    if (uploadBtn)
+      uploadBtn.textContent = count > 0 ? `Upload Face (${count})` : "Upload Face";
+    qs("#btn-clear")?.classList.toggle("hidden", count === 0);
+  }
+
+  private getHeadKeys(): string[] {
+    return (this.registry.get("headKeys") as string[] | undefined) ?? [];
   }
 
   private handleFileUpload = async (event: Event) => {
     const fileInput = event.target as HTMLInputElement;
-    const files = fileInput.files;
-    if (!files || files.length === 0) return;
+    const files = Array.from(fileInput.files ?? []);
+    if (files.length === 0) return;
 
-    console.log("Files selected:", files.length);
+    const uploadBtn = qs("#btn-upload");
+    if (uploadBtn) uploadBtn.textContent = "Indlæser…";
 
-    // Hent eksisterende billeder (tilføj til dem i stedet for at erstatte)
-    const existingKeys = (this.registry.get("headKeys") as string[]) || [];
-    const headKeys: string[] = [...existingKeys]; // Start med eksisterende
-    const uploadId = Date.now(); // Ét timestamp for hele uploaden
+    // Tilføj til eksisterende billeder i stedet for at erstatte
+    const headKeys = [...this.getHeadKeys()];
+    const uploadId = Date.now();
+    let failed = 0;
 
-    // Indlæs alle valgte billeder og vent på at de er helt loaded
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      console.log(`Loading file ${i + 1}/${files.length}: ${file.name}`);
-      const dataUrl = await this.readFileAsDataURL(file);
-      const key = `custom-head-${uploadId}-${i}`; // Unikt key med upload ID + index
-
-      // Vent på at teksturen er loaded før vi fortsætter
-      await this.loadBase64Texture(key, dataUrl);
+    // Indlæs parallelt - hvert billede skaleres ned så store fotos ikke sluger RAM
+    const results = await Promise.allSettled(
+      files.map((file) => this.loadFaceCanvas(file))
+    );
+    results.forEach((res, i) => {
+      if (res.status === "rejected") {
+        failed++;
+        return;
+      }
+      const key = `custom-head-${uploadId}-${i}`;
+      this.textures.addCanvas(key, res.value);
       headKeys.push(key);
-      console.log("Loaded texture:", key, "exists:", this.textures.exists(key));
-    }
+    });
 
-    console.log("All textures loaded, headKeys:", headKeys);
     this.registry.set("headKeys", headKeys);
-    this.showToast(`${headKeys.length} billede(r) i alt.`);
+    this.syncMenuUi();
+    if (failed > 0) alert(`${failed} billede(r) kunne ikke indlæses.`);
 
     // Nulstil file input så samme fil kan vælges igen
     fileInput.value = "";
   };
 
-  private loadBase64Texture(key: string, dataUrl: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Fjern eksisterende tekstur hvis den findes
-      if (this.textures.exists(key)) {
-        this.textures.remove(key);
-      }
-
-      // Brug et Image element for at sikre billedet er helt loaded
+  // Indlæs fil og lav et centreret, nedskaleret kvadrat-udsnit
+  private async loadFaceCanvas(file: File): Promise<HTMLCanvasElement> {
+    const url = URL.createObjectURL(file);
+    try {
       const img = new Image();
-      img.onload = () => {
-        // Billedet er loaded, nu kan vi tilføje det som tekstur
-        this.textures.addImage(key, img);
-        console.log(
-          "Image loaded and added:",
-          key,
-          "size:",
-          img.width,
-          "x",
-          img.height
-        );
-        resolve();
-      };
-      img.onerror = (err) => {
-        console.error("Failed to load image:", err);
-        reject(err);
-      };
-      img.src = dataUrl;
-    });
-  }
+      img.src = url;
+      await img.decode();
 
-  private triggerFileUpload() {
-    const fileInput = document.getElementById(
-      "file-input"
-    ) as HTMLInputElement | null;
-    if (fileInput) {
-      fileInput.click();
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const out = Math.min(side, MAX_FACE_SIZE);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = out;
+      const ctx = canvas.getContext("2d")!;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(
+        img,
+        (img.naturalWidth - side) / 2,
+        (img.naturalHeight - side) / 2,
+        side,
+        side,
+        0,
+        0,
+        out,
+        out
+      );
+      return canvas;
+    } finally {
+      URL.revokeObjectURL(url);
     }
   }
 
-  private readFileAsDataURL(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
+  private clearFaces() {
+    const keys = new Set(this.getHeadKeys());
+    // Fjern både original-teksturer og deres stylede tile-varianter
+    this.textures.getTextureKeys().forEach((key) => {
+      if (keys.has(key) || [...keys].some((k) => key.startsWith(`tile-${k}-`)))
+        this.textures.remove(key);
     });
+    this.registry.set("headKeys", []);
+    this.syncMenuUi();
   }
 
-  private showToast(text: string) {
-    const toast = this.add
-      .text(this.scale.width / 2, 200, text, {
-        fontFamily: "Segoe UI",
-        fontSize: "16px",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,.7)",
-        padding: { x: 12, y: 8 },
-      })
-      .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: toast,
-      alpha: 0,
-      delay: 1500,
-      duration: 600,
-      onComplete: () => toast.destroy(),
-    });
-  }
-
-  private startGrid(size: number, drinkingMode: boolean = false) {
-    // Skjul menu
+  private startGrid() {
     qs("#menu")?.classList.add("hidden");
 
-    const headKeys = this.registry.get("headKeys") as string[] | undefined;
-    // Send alle headKeys til GridScene så vi kan have forskellige ansigter
+    const headKeys = this.getHeadKeys();
     this.scene.start("grid", {
-      size,
-      headKeys: headKeys && headKeys.length > 0 ? headKeys : ["fallback-head"],
+      size: this.selectedSize,
+      headKeys: headKeys.length > 0 ? headKeys : ["fallback-head"],
       hideMarker: true,
-      drinkingMode,
+      drinkingMode: this.selectedDrinkingMode,
     });
   }
 }

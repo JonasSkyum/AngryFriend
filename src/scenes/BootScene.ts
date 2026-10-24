@@ -8,9 +8,9 @@ export default class BootScene extends Phaser.Scene {
   preload() {
     // Generér en simpel fallback-tekstur (rød cirkel)
     const g = this.add.graphics()
-    g.fillStyle(0xff4444, 1).fillCircle(30, 30, 30)
-    g.lineStyle(3, 0x111111, 0.9).strokeCircle(30, 30, 30)
-    g.generateTexture('fallback-head', 60, 60)
+    g.fillStyle(0xff4444, 1).fillCircle(128, 128, 124)
+    g.lineStyle(8, 0x111111, 0.9).strokeCircle(128, 128, 124)
+    g.generateTexture('fallback-head', 256, 256)
     g.destroy()
   }
 

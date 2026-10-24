@@ -11,9 +11,12 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 360,
-    height: 640
+    // 2x opløsning så ansigterne er skarpe på retina-skærme
+    width: 720,
+    height: 1280
   },
+  // Spillet er rent 2D uden fysik/lyd - spar opstartstid
+  audio: { noAudio: true },
   scene: [BootScene, MenuScene, GridScene]
 }
 

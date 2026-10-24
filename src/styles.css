@@ -41,13 +41,20 @@ body {
   );
 }
 
-#app {
-  width: 100vw;
-  height: 100vh;
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
-#ui {
-  display: none;
+/* fixed + inset undgår 100vh-problemet med mobilens adresselinje */
+#app {
+  position: fixed;
+  inset: 0;
 }
 
 /* Ensartet knap-base */
@@ -180,6 +187,13 @@ body {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--fg-dim);
+}
+
+.segment--fill {
+  display: flex;
+}
+.segment--fill .btn--wide {
+  flex: 1;
 }
 
 /* Upload-knap i fuld bredde */
